@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?> 
+<Module>
+	<ModulePrefs title="Madcom top 20"
+		author="Ryan Schremp"
+		author_email="rschremp@madison.com">
+		<Require feature="opensocial-0.7" />
+		<Require feature="views" />
+	</ModulePrefs>
+	<UserPref name="num_entries" display_name="Number of Entries:" default_value="20" />
+	<Content type="html">
+		<![CDATA[ 
+		<div id="test" style="width:400px;font-family:verdana;font-size:8pt;border:1px dashed #000;padding:10px;"></div>
+		<script type="text/javascript" 
+		    src="http://ajax.googleapis.com/ajax/libs/prototype/1.6.0.2/prototype.js"></script>
+		<script type="text/javascript">
+			var userPrefs = new _IG_Prefs();
+			var entries = 20; //userPrefs.getInt("num_entries"); This isn't working for some reason...
+			function grabHeadlines(){
+				$('test').update("Loading...");
+				var url = 'http://www.madison.com/rss/rss.xml'
+				var params = {};
+				params[gadgets.io.RequestParameters.CONTENT_TYPE] = gadgets.io.ContentType.FEED;
+				params[gadgets.io.RequestParameters.NUM_ENTRIES] = new Number(entries);
+				params[gadgets.io.RequestParameters.GET_SUMMARIES] = true;
+				params[gadgets.io.RequestParameters.REFRESH_INTERVAL] = 60;
+				gadgets.io.makeRequest(url, function( content ){
+					var feedContents = content.data;
+					$('test').update("<h1 style='text-align:center;'>Madison.com most recent</h3>");
+					for (var i = 0 ; i < feedContents.Entry.length ; i++){
+						articleItem = feedContents.Entry[i];
+						$('test').insert("<em>" + i.succ() + ":</em>&nbsp;<a href=javascript:expandArticle('article_" + i + "')>" + articleItem.Title + "</a><br/>");
+						$('test').insert("<div id=article_" + i + " class='article_text'>" + articleItem.Summary + "<br/><p style='text-align:right'><a href=" + articleItem.Link + ">Read entire article>></a></p></div>");
+						$('article_' + i).hide();
+					}
+				}, params);
+			}
+			function expandArticle(elementID){
+				$$('.article_text').each(function(visibleCheck) {
+					if ((visibleCheck.visible()) && (visibleCheck != $(elementID))){
+						visibleCheck.hide();
+					}
+				});
+				$(elementID).toggle();
+			}
+			gadgets.util.registerOnLoadHandler(grabHeadlines);
+		</script>
+		<div id="viewstuffs"></div>
+		]]>
+	</Content> 
+</Module>
