@@ -2,34 +2,70 @@
 <Module>
 	<ModulePrefs title="Madcom top 20"
 		author="Ryan Schremp"
-		author_email="rschremp@madison.com">
+		author_email="rschremp@madison.com"
+		scrolling="true">
 		<Require feature="opensocial-0.7" />
-		<Require feature="views" />
+		<Require feature="minimessage"/>
+		<Require feature="tabs" />
+		<Require feature="setprefs" />
 	</ModulePrefs>
 	<UserPref name="num_entries" display_name="Number of Entries:" default_value="20" />
-	<Content type="html">
-		<![CDATA[ 
-		<div id="test" style="width:400px;font-family:verdana;font-size:8pt;border:1px dashed #000;padding:10px;"></div>
+	<UserPref name="url" display_name="URL of desired feed:" default_value="http://www.madison.com/rss/rss.xml"/>
+	<Content type="html" view="profile">
+		<![CDATA[
+		<div id="test" style="margin:0px auto;font-family:verdana;font-size:8pt;border:1px dashed #000;border-top:0px;padding:10px;"></div>
 		<script type="text/javascript" 
 		    src="http://ajax.googleapis.com/ajax/libs/prototype/1.6.0.2/prototype.js"></script>
 		<script type="text/javascript">
-			var userPrefs = new _IG_Prefs();
-			var entries = 20; //userPrefs.getInt("num_entries"); This isn't working for some reason...
-			function grabHeadlines(){
-				$('test').update("Loading...");
-				var url = 'http://www.madison.com/rss/rss.xml'
-				var params = {};
+			var viewPrefs = new gadgets.Prefs();
+			var msg = new gadgets.MiniMessage(__MODULE_ID__);
+			var tabs = new gadgets.TabSet(__MODULE_ID__, "Preferences");
+			function notice(msgText,msgDuration){
+			  	var statusMsg = msg.createTimerMessage(msgText, msgDuration);
+			}
+			function warn(msgText){
+			  	var statusMsg = msg.createDismissibleMessage(msgText);
+			}
+			
+			function init(){
+				tabs.addTab("Feed", {
+					callback: grabHeadlines
+				});
+				tabs.addTab("Preferences",{
+					callback: changeView
+				});
+
+			}
+			function changeView() {
+				var html = "<FORM NAME='feedPrefs' ACTION='' METHOD='GET'><BR/>" +
+					"Feed URL: <INPUT TYPE='text' NAME='url' VALUE='" + viewPrefs.getString('url') + "'><br/>" +
+					"Items Per Page: <INPUT TYPE='text' NAME='display_num' VALUE='" + viewPrefs.getInt('display_num') + "'><br/>" +
+					"<INPUT TYPE='button' NAME='button' Value='Save' onClick='setPrefs(this.form);'>";
+					$('test').update(html);
+				
+			}
+			function setPrefs(form){
+				viewPrefs.set('url', form.url.value);
+				notice('<h3>Saving Preferences...</h3>',1);
+				viewPrefs.set('display_num', form.display_num.value);
+				tabs.setSelectedTab(0);
+
+			}
+			function grabHeadlines(){				
+				var url = viewPrefs.getString('url');
+				params = {};
 				params[gadgets.io.RequestParameters.CONTENT_TYPE] = gadgets.io.ContentType.FEED;
-				params[gadgets.io.RequestParameters.NUM_ENTRIES] = new Number(entries);
+				params[gadgets.io.RequestParameters.NUM_ENTRIES] = viewPrefs.getInt('display_num');
 				params[gadgets.io.RequestParameters.GET_SUMMARIES] = true;
 				params[gadgets.io.RequestParameters.REFRESH_INTERVAL] = 60;
+				notice('<h3>Retrieving Feed</h3>',2);
 				gadgets.io.makeRequest(url, function( content ){
 					var feedContents = content.data;
-					$('test').update("<h1 style='text-align:center;'>Madison.com most recent</h3>");
+					$('test').update("<h1 style='text-align:center;'>" + feedContents.Title + "</h1>");
 					for (var i = 0 ; i < feedContents.Entry.length ; i++){
 						articleItem = feedContents.Entry[i];
-						$('test').insert("<em>" + i.succ() + ":</em>&nbsp;<a href=javascript:expandArticle('article_" + i + "')>" + articleItem.Title + "</a><br/>");
-						$('test').insert("<div id=article_" + i + " class='article_text'>" + articleItem.Summary + "<br/><p style='text-align:right'><a href=" + articleItem.Link + ">Read entire article>></a></p></div>");
+						$('test').insert("<div class='item'><em>" + i.succ() + ":</em>&nbsp;<a href=javascript:expandArticle('article_" + i + "')>" + articleItem.Title + "</a></div><br/>");
+						$('test').insert("<div id=article_" + i + " class='article_text'>" + articleItem.Summary + "<br/><p style='text-align:right'><a href=" + articleItem.Link + " target='_new'>Read entire article>></a></p></div>");
 						$('article_' + i).hide();
 					}
 				}, params);
@@ -42,9 +78,9 @@
 				});
 				$(elementID).toggle();
 			}
-			gadgets.util.registerOnLoadHandler(grabHeadlines);
+			gadgets.util.registerOnLoadHandler(init);
 		</script>
-		<div id="viewstuffs"></div>
+		<div id="viewstuffs" style="width:400px;"></div>
 		]]>
 	</Content> 
 </Module>
